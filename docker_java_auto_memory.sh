@@ -7,6 +7,8 @@ export JAVA_OPTS="-Duser.timezone=GMT+8"
 RESERVED_MEGABYTES=268435456
 JAVA_INIT_MEM_RATIO=20
 JAVA_MAX_MEM_RATIO=70
+JAVA_INIT_META_SPACE_RATIO=20
+JAVA_MAX_META_SPACE_RATIO=80
 
 # Generic formula evaluation based on awk
 calc() {
@@ -78,8 +80,39 @@ calc_max_memory() {
   fi
 }
 
+calc_metaspace_memory() {
+  # Check whether -XX:MetaspaceSize is already given in JAVA_OPTS.
+  if echo "${JAVA_OPTS:-}" | grep -q -- "-XX:MetaspaceSize"; then
+    return
+  fi
+
+  # Check if value set
+  if [ -z "${JAVA_INIT_META_SPACE_RATIO:-}" ] || [ -z "${available_memory_size:-}" ]; then
+    return
+  fi
+
+  # Calculate -XX:MetaspaceSize from the ratio given
+  calc_mem_opt "${available_memory_size}" "${JAVA_INIT_META_SPACE_RATIO}" "X:MetaspaceSize="
+}
+
+calc_max_metaspace_memory() {
+  # Check whether -XX:MaxMetaspaceSize is already given in JAVA_OPTS.
+  if echo "${JAVA_OPTS:-}" | grep -q -- "-XX:MaxMetaspaceSize"; then
+    return
+  fi
+
+  # Check if value set
+  if [ -z "${JAVA_MAX_META_SPACE_RATIO:-}" ] || [ -z "${available_memory_size:-}" ]; then
+    return
+  fi
+
+  # Calculate -XX:MaxMetaspaceSize from the ratio given
+  calc_mem_opt "${available_memory_size}" "${JAVA_MAX_META_SPACE_RATIO}" "X:MaxMetaspaceSize="
+}
+
 memory_options() {
-  echo "$(calc_init_memory) $(calc_max_memory)"
+  echo "$(calc_init_memory) $(calc_max_memory) $(calc_metaspace_memory) $(calc_max_metaspace_memory)"
+ # echo "$(calc_metaspace_memory)"
   return
 }
 
@@ -94,6 +127,5 @@ then
 #   JAVA_OPTS= "${JAVA_OPTS:-} $(memory_options) -XX:+PrintFlagsFinal"
 fi
 
-exec java $(java_options) -version | grep Heap
-
-#exec catalina.sh run
+#exec java $(java_options) -version | grep Heap
+java_options
