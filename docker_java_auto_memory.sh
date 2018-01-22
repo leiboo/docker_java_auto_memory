@@ -95,3 +95,5 @@ then
 fi
 
 exec java $(java_options) -version | grep Heap
+
+#exec catalina.sh run
